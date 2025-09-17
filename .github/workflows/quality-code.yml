@@ -1,0 +1,37 @@
+name: Code Quality Checks
+
+on:
+  pull_request:
+    branches:
+      - main
+  pull_request_review_comment:
+    types: [created]
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [labeled]
+
+jobs:
+  code-quality:
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'pull_request_target' && github.event.action == 'labeled' && github.event.label.name == 'check') ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, 'recheck'))
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Black
+        run: pip install black
+
+      - name: Run Black check
+        run: black --check .
+
+      - name: Check Python version
+        run: python --version
