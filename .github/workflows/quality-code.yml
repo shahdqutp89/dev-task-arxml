@@ -1,0 +1,31 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+  issue_comment:
+    types: [created]
+
+jobs:
+  run-checks:
+    runs-on: ubuntu-latest
+    if: >
+      contains(github.event.pull_request.labels.*.name, 'check') ||
+      (github.event_name == 'issue_comment' && github.event.comment.body == 'recheck')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install black
+
+      - name: Run Black formatting check
+        run: black --check .
+
+      - name: Verify Python compilation
+        run: python -m compileall -q .
