@@ -1,9 +1,0 @@
-# Ignore everything
-*
-
-# Allow only Python, Markdown, TXT, YAML for GitHub Actions
-!*.py
-!*.md
-!*.txt
-!.gitignore
-!.github/workflows/*.yml
