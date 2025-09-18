@@ -1,23 +1,22 @@
 import xml.etree.ElementTree as ET
 import json
+import argparse
 
-
-def arxml_to_dict(elem):
+def arxml_to_dict(element):
     """Recursively convert an ElementTree element into a dictionary."""
-    d = {}
-
+    result_dict = {}
+    
     # Include element attributes if any
-    if elem.attrib:
+    if element.attrib:
         # Use attribute keys as-is, you may want to process namespaces if needed
-        d.update({f"@{k}": v for k, v in elem.attrib.items()})
+        result_dict.update({f"@{key}": value for key, value in element.attrib.items()})
 
-    # Process child elements
-    children = list(elem)
+    children = list(element)
     if children:
-        # Group children by tag
+
         child_dict = {}
         for child in children:
-            child_tag = child.tag.split("}")[-1]  # Remove namespace
+            child_tag = child.tag.split('}')[-1]  
             child_data = arxml_to_dict(child)
             # If tag already exists, convert to list
             if child_tag in child_dict:
@@ -26,37 +25,41 @@ def arxml_to_dict(elem):
                 child_dict[child_tag].append(child_data)
             else:
                 child_dict[child_tag] = child_data
-        d.update(child_dict)
+        result_dict.update(child_dict)
     else:
         # Leaf node, get text
-        text = elem.text.strip() if elem.text else ""
+        text = element.text.strip() if element.text else ''
         if text:
-            d = text if not d else {**d, "#text": text}
+            result_dict = text if not result_dict else {**result_dict, "#text": text}
         else:
-            if not d:
-                d = None  # Empty element
+            if not result_dict:
+                result_dict = None  # Empty element
+    
+    return result_dict
 
-    return d
-
+def save_json_output(data, output_file):
+    """Save dictionary data to JSON file."""
+    with open(output_file, 'w', encoding='utf-8') as file:
+        json.dump(data, file, indent=2)
 
 def main():
-    # Load ARXML file
-    input_file = "SOUND_Short_eHorizon_Pdu.arxml"
-    output_file = "output.json"
+    # Add argparse implementation
+    parser = argparse.ArgumentParser(description='Convert ARXML file to JSON format')
+    parser.add_argument('input_file', help='Input ARXML file path')
+    parser.add_argument('output_file', help='Output JSON file path')
+    
+    arguments = parser.parse_args()
 
-    tree = ET.parse(input_file)
+    tree = ET.parse(arguments.input_file)
     root = tree.getroot()
 
-    # Convert root element (strip namespace for root tag)
-    root_tag = root.tag.split("}")[-1]
+    root_tag = root.tag.split('}')[-1]
     arxml_dict = {root_tag: arxml_to_dict(root)}
 
     # Save JSON output
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(arxml_dict, f, indent=2)
+    save_json_output(arxml_dict, arguments.output_file)
 
-    print(f"Converted {input_file} to {output_file}")
-
+    print(f"Converted {arguments.input_file} to {arguments.output_file}")
 
 if __name__ == "__main__":
     main()

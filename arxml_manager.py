@@ -54,8 +54,8 @@ class ARXMLManager(ARXMLManagerSingleton):
 
     def add_attribute_by_tag(self, tag: str, attr_name: str, attr_value: str) -> int:
         elements = self.find_elements_by_tag(tag)
-        for e in elements:
-            self._manipulator.add_attribute(e, attr_name, attr_value)
+        for element in elements:
+            self._manipulator.add_attribute(element, attr_name, attr_value)
         return len(elements)
 
 
