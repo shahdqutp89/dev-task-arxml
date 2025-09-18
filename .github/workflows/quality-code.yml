@@ -19,6 +19,14 @@ jobs:
       contains(github.event.comment.body, 'recheck')
     runs-on: ubuntu-latest
     steps:
+      - name: Debug comment trigger
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Action: ${{ github.event.action }}"
+          echo "Is PR comment: ${{ github.event.issue.pull_request != null }}"
+          echo "Comment body: '${{ github.event.comment.body }}'"
+          echo "Contains recheck: ${{ contains(github.event.comment.body, 'recheck') }}"
+      
       - name: Add check label
         uses: actions/github-script@v6
         with:
