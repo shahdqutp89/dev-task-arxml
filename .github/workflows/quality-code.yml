@@ -10,32 +10,56 @@ on:
     types: [created]
 
 jobs:
+  # Job to add label when "recheck" is commented
+  add-label:
+    if: |
+      github.event_name == 'issue_comment' && 
+      github.event.action == 'created' && 
+      github.event.issue.pull_request && 
+      contains(github.event.comment.body, 'recheck')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add check label
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['check']
+            });
+
+  # Main code quality job
   code-quality:
     if: |
       github.event_name == 'pull_request' ||
       (github.event_name == 'pull_request_target' && github.event.action == 'labeled' && github.event.label.name == 'check') ||
       (github.event_name == 'issue_comment' && github.event.action == 'created' && github.event.issue.pull_request && contains(github.event.comment.body, 'recheck'))
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Debug trigger info
         run: |
           echo "Event: ${{ github.event_name }}"
           echo "Action: ${{ github.event.action }}"
           echo "Comment body: ${{ github.event.comment.body }}"
-
+      
       - uses: actions/checkout@v3
-
+        with:
+          # Use the PR head ref for pull_request_target events
+          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.sha }}
+      
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-
+      
       - name: Install Black
         run: pip install black
-
+      
       - name: Run Black check
         run: black --check .
-
+      
       - name: Check Python version
         run: python --version
