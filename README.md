@@ -4,7 +4,6 @@
 A Python tool for manipulating AUTOSAR XML (ARXML) files with support for attribute operations and JSON conversion.
 
 ## Features
-
 -  **Load and save ARXML files**
 -  **Add, edit, and delete attributes** in XML elements
 -  **Find elements** by tag, XPath, or attribute values
