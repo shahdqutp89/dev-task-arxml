@@ -1,6 +1,5 @@
 # dev-task-arxml
 # ARXML Manager
-
 A Python tool for manipulating AUTOSAR XML (ARXML) files with support for attribute operations and JSON conversion.
 
 ## Features
