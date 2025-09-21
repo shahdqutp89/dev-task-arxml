@@ -12,7 +12,6 @@ A Python tool for manipulating AUTOSAR XML (ARXML) files with support for attrib
 -  **Singleton pattern** for consistent instance management
 -  **Error handling** for file operations and XML parsing
 
-
 ## Quick Usage
 
 ### Basic Example
