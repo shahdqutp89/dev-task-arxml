@@ -1,4 +1,5 @@
 name: Code Quality Checks
+
 on:
   pull_request:
     branches:
@@ -7,42 +8,44 @@ on:
     types: [opened, reopened, labeled, unlabeled, synchronize]
   issue_comment:
     types: [created]
+
 jobs:
   code-quality:
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'pull_request_target' && github.event.action == 'labeled' && github.event.label.name == 'check') ||
-      (github.event_name == 'issue_comment' && github.event.comment.body == 'recheck')
+      (github.event_name == 'pull_request_target' && contains(github.event.pull_request.labels.*.name, 'check')) ||
+      (github.event_name == 'issue_comment' && github.event.comment.body == 'recheck' && github.event.issue.pull_request != null)
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
       issues: write
+
     steps:
       - name: Debug trigger info
         run: |
           echo "Event: ${{ github.event_name }}"
           echo "Action: ${{ github.event.action }}"
           echo "Comment body: ${{ github.event.comment.body }}"
-          echo "Label name: ${{ github.event.label.name }}"
+          echo "Label names: ${{ toJSON(github.event.pull_request.labels.*.name) }}"
           echo "Is PR: ${{ github.event.issue.pull_request != null }}"
-      
+          
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # For pull_request_target, checkout the PR head
           ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.sha }}
-      
+          
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-      
+          python-version: '3.12'
+          
       - name: Install Black
         run: pip install black
-      
+          
       - name: Run Black check
         run: black --check .
-      
+          
       - name: Check Python version
         run: python --version
