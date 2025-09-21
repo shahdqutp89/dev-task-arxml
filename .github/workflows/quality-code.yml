@@ -9,19 +9,13 @@ on:
     types: [created]
 
 jobs:
-  # Job to check if we should run the quality checks
   should-run:
     runs-on: ubuntu-latest
     outputs:
       run-checks: ${{ steps.check.outputs.run-checks }}
     steps:
-      - name: Check if we should run quality checks
-        id: check
+      - id: check
         run: |
-          # Run checks if:
-          # 1. It's a regular PR event (opened, synchronize, reopened)
-          # 2. A "check" label was added
-          # 3. A comment with "recheck" was added
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "run-checks=true" >> $GITHUB_OUTPUT
           elif [[ "${{ github.event_name }}" == "pull_request_target" && "${{ github.event.label.name }}" == "check" ]]; then
@@ -32,156 +26,42 @@ jobs:
             echo "run-checks=false" >> $GITHUB_OUTPUT
           fi
 
-  # Code formatting check using Black
   code-formatting:
     needs: should-run
     if: needs.should-run.outputs.run-checks == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          # For pull_request_target, we need to checkout the PR head
           ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.12'
+      - run: pip install black
+      - run: black --check --diff .
 
-      - name: Install Black
-        run: |
-          python -m pip install --upgrade pip
-          pip install black
-
-      - name: Run Black check
-        run: |
-          echo "Checking Python code formatting with Black..."
-          # Use --check flag to verify formatting without making changes
-          # Use --diff to show what would be changed
-          if ! black --check --diff .; then
-            echo "❌ Code formatting check failed!"
-            echo "Some files are not formatted according to Black's style guidelines."
-            echo "Please run 'black .' to format your code and commit the changes."
-            exit 1
-          else
-            echo "✅ All Python files are properly formatted!"
-          fi
-
-  # Python version compatibility check
   python-compatibility:
     needs: should-run
     if: needs.should-run.outputs.run-checks == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          # For pull_request_target, we need to checkout the PR head
           ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.12'
+      - run: |
+          find . -name "*.py" -not -path "./.*" | xargs python -m py_compile
 
-      - name: Check Python 3.12 compatibility
-        run: |
-          echo "Checking Python 3.12 syntax compatibility..."
-          
-          # Find all Python files
-          python_files=$(find . -name "*.py" -not -path "./.*" | head -20)
-          
-          if [ -z "$python_files" ]; then
-            echo "No Python files found to check."
-            exit 0
-          fi
-          
-          echo "Found Python files to check:"
-          echo "$python_files"
-          
-          # Check syntax compatibility by compiling each file
-          failed_files=()
-          for file in $python_files; do
-            echo "Checking: $file"
-            if ! python -m py_compile "$file" 2>/dev/null; then
-              echo "❌ Syntax error in: $file"
-              failed_files+=("$file")
-            else
-              echo "✅ $file is compatible"
-            fi
-          done
-          
-          # If any files failed, report and exit with error
-          if [ ${#failed_files[@]} -ne 0 ]; then
-            echo ""
-            echo "❌ Python 3.12 compatibility check failed!"
-            echo "The following files have syntax errors or use incompatible syntax:"
-            printf '%s\n' "${failed_files[@]}"
-            echo ""
-            echo "Please fix the syntax errors to ensure compatibility with Python 3.12."
-            exit 1
-          else
-            echo ""
-            echo "✅ All Python files are compatible with Python 3.12!"
-          fi
-
-  # Summary job that will be required for branch protection
-  quality-checks-summary:
+  quality-checks:
     needs: [should-run, code-formatting, python-compatibility]
     if: always() && needs.should-run.outputs.run-checks == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Check all quality checks passed
-        run: |
+      - run: |
           if [[ "${{ needs.code-formatting.result }}" == "success" && "${{ needs.python-compatibility.result }}" == "success" ]]; then
-            echo "✅ All quality checks passed!"
             exit 0
           else
-            echo "❌ Some quality checks failed:"
-            echo "Code formatting: ${{ needs.code-formatting.result }}"
-            echo "Python compatibility: ${{ needs.python-compatibility.result }}"
             exit 1
           fi
-
-      - name: Comment on PR with results
-        if: github.event_name != 'issue_comment'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const formatResult = '${{ needs.code-formatting.result }}';
-            const compatResult = '${{ needs.python-compatibility.result }}';
-            
-            let message = '## 🔍 Quality Checks Results\n\n';
-            
-            // Code formatting results
-            if (formatResult === 'success') {
-              message += '✅ **Code Formatting**: All files are properly formatted with Black\n';
-            } else {
-              message += '❌ **Code Formatting**: Some files need formatting. Run `black .` to fix.\n';
-            }
-            
-            // Python compatibility results  
-            if (compatResult === 'success') {
-              message += '✅ **Python 3.12 Compatibility**: All files are syntactically compatible\n';
-            } else {
-              message += '❌ **Python 3.12 Compatibility**: Some files have syntax errors\n';
-            }
-            
-            if (formatResult === 'success' && compatResult === 'success') {
-              message += '\n🎉 **All quality checks passed!** This PR is ready for review.';
-            } else {
-              message += '\n⚠️ **Please fix the issues above before this PR can be merged.**\n\n';
-              message += 'You can trigger a recheck by:\n';
-              message += '- Adding the `check` label to this PR\n';
-              message += '- Commenting `recheck` on this PR';
-            }
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: message
-            });
