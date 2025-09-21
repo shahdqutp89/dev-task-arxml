@@ -1,67 +1,57 @@
-name: PR Quality Checks
+name: Automated PR Quality Checks
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    branches:
+      - '**'
   pull_request_target:
     types: [labeled]
   issue_comment:
     types: [created]
 
 jobs:
-  should-run:
-    runs-on: ubuntu-latest
-    outputs:
-      run-checks: ${{ steps.check.outputs.run-checks }}
-    steps:
-      - id: check
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "run-checks=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "pull_request_target" && "${{ github.event.label.name }}" == "check" ]]; then
-            echo "run-checks=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "issue_comment" && "${{ github.event.issue.pull_request }}" && "${{ contains(github.event.comment.body, 'recheck') }}" ]]; then
-            echo "run-checks=true" >> $GITHUB_OUTPUT
-          else
-            echo "run-checks=false" >> $GITHUB_OUTPUT
-          fi
-
-  code-formatting:
-    needs: should-run
-    if: needs.should-run.outputs.run-checks == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.head_ref }}
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-      - run: pip install black
-      - run: black --check --diff .
-
-  python-compatibility:
-    needs: should-run
-    if: needs.should-run.outputs.run-checks == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.head_ref }}
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-      - run: |
-          find . -name "*.py" -not -path "./.*" | xargs python -m py_compile
-
   quality-checks:
-    needs: [should-run, code-formatting, python-compatibility]
-    if: always() && needs.should-run.outputs.run-checks == 'true'
+    name: Code Quality Validation
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'pull_request_target' && github.event.label.name == 'check') ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, 'recheck'))
+    
     steps:
-      - run: |
-          if [[ "${{ needs.code-formatting.result }}" == "success" && "${{ needs.python-compatibility.result }}" == "success" ]]; then
-            exit 0
-          else
-            exit 1
-          fi
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.event.pull_request.head.ref }}
+      
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install required tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install black pyright
+      
+      - name: Validate code formatting
+        run: |
+          echo "Running Black formatter check..."
+          black --check --diff .
+      
+      - name: Verify Python 3.12 compatibility
+        run: |
+          echo "Checking Python 3.12 syntax compatibility..."
+          pyright --pythonversion 3.12 .
+
+  auto-trigger-info:
+    name: Workflow Trigger Information
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Display trigger options
+        run: |
+          echo "This workflow runs automatically on PRs"
+          echo "To manually re-trigger:"
+          echo "- Add 'check' label to the PR"
+          echo "- Comment 'recheck' on the PR"
