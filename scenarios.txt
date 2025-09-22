@@ -1,6 +1,5 @@
 ARXML Manager Test Suite Summary
 ================================
-
 Test 1: Add New Attributes
 --------------------------
 A custom attribute 'test-version' with value '1.0' was added to all <SHORT-NAME> elements.
@@ -39,4 +38,5 @@ The modified ARXML structure was saved to the file: output_test_result.arxml.
 Final Status:
 -------------
 All test cases completed successfully.
+
 The file output_test_result.arxml contains the result of all operations performed.
