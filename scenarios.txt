@@ -4,7 +4,6 @@ Test 1: Add New Attributes
 --------------------------
 A custom attribute 'test-version' with value '1.0' was added to all <SHORT-NAME> elements.
 Verification confirmed that the attribute was correctly added to all targeted elements.
-
 Test 2: Edit Existing Attributes
 -------------------------------
 The first element with a 'UUID' attribute was modified. The original UUID was temporarily replaced with a new value and then restored.
@@ -40,3 +39,4 @@ Final Status:
 All test cases completed successfully.
 
 The file output_test_result.arxml contains the result of all operations performed.
+
