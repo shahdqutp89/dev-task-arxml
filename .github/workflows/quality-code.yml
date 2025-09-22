@@ -1,22 +1,22 @@
-name: Pull Request Validation
+name: PR Quality + Recheck Trigger
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize, labeled, unlabeled]
+    types: [opened, reopened, labeled, unlabeled, synchronize]
   issue_comment:
     types: [created]
 
 jobs:
-  run-checks:
+  quality-checks:
     runs-on: ubuntu-latest
     if: |
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'check')) ||
       (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, 'recheck'))
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Setup Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -24,8 +24,8 @@ jobs:
       - name: Install dependencies
         run: pip install black
 
-      - name: Run Black formatting check
+      - name: Run Black style check
         run: black --check .
 
-      - name: Verify Python compilation
+      - name: Syntax validation
         run: python -m compileall -q .
