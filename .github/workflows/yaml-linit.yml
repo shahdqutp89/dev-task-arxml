@@ -1,0 +1,36 @@
+name: "Validate YAML files"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  yaml-lint:
+    name: "YAML Lint"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Option A: use the yamllint action
+      - name: Run yamllint via action
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          # specify which files or directories
+          file_or_dir: .github/workflows/auto_merge.yml
+          # You could also run all YAML files: “. ”
+          # strict: false  # or true, if you want warnings to also fail
+
+      # Option B: install yamllint and run it yourself
+      # (choice: pick one of A or B)
+      - name: Install yamllint
+        run: |
+          python3 -m pip install yamllint
+      - name: Lint YAML by hand
+        run: yamllint .github/workflows/auto_merge.yml
+
+      # optional: upload log or show output
