@@ -20,11 +20,11 @@ jobs:
       - name: Run yamllint via action
         uses: ibiqlik/action-yamllint@v3
         with:
-          file_or_dir: .github/workflows/quality-code.yml
+          file_or_dir: .github/workflows/quality_code.yml
 
       # Option B: install yamllint and run it yourself
       - name: Install yamllint
         run: |
           python3 -m pip install yamllint
       - name: Lint YAML by hand
-        run: yamllint .github/workflows/quality-code.yml
+        run: yamllint .github/workflows/quality_code.yml
