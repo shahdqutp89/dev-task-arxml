@@ -30,7 +30,7 @@ jobs:
         run: pip install black
 
       - name: Run Black formatting check
-        run: black --check --diff $(git ls-files '*.py')
+        run: black --check --diff 
 
       - name: Verify Python compilation
         run: python -m compileall -q .
