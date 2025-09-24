@@ -1,0 +1,30 @@
+name: "Validate YAML files"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  yaml-lint:
+    name: "YAML Lint"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Option A: use the yamllint action
+      - name: Run yamllint via action
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: .github/workflows/quality_code.yml
+
+      # Option B: install yamllint and run it yourself
+      - name: Install yamllint
+        run: |
+          python3 -m pip install yamllint
+      - name: Lint YAML by hand
+        run: yamllint .github/workflows/quality_code.yml
